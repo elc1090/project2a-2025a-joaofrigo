@@ -1,64 +1,48 @@
-// Get the GitHub username input form
 const gitHubForm = document.getElementById('gitHubForm');
 
-// Listen for submissions on GitHub username input form
 gitHubForm.addEventListener('submit', (e) => {
-
-    // Prevent default form submission action
     e.preventDefault();
 
-    // Get the GitHub username input field on the DOM
-    let usernameInput = document.getElementById('usernameInput');
+    const usernameInput = document.getElementById('usernameInput');
+    const repoInput = document.getElementById('repoInput');
+    const userCommits = document.getElementById('userCommits');
 
-    // Get the value of the GitHub username input field
-    let gitHubUsername = usernameInput.value;
+    const gitHubUsername = usernameInput.value.trim();
+    const repositoryName = repoInput.value.trim();
 
-    // Run GitHub API function, passing in the GitHub username
-    requestUserRepos(gitHubUsername)
-        .then(response => response.json()) // parse response into json
+    userCommits.innerHTML = ''; // Limpar lista
+
+    if (!gitHubUsername || !repositoryName) {
+        alert("Preencha todos os campos!");
+        return;
+    }
+
+    requestUserCommits(gitHubUsername, repositoryName)
+        .then(response => response.json())
         .then(data => {
-            // update html with data from github
-            for (let i in data) {
-                // Get the ul with id of userRepos
+            if (data.message === "Not Found") {
+                const li = document.createElement('li');
+                li.classList.add('list-group-item', 'text-danger');
+                li.innerHTML = `<strong>Repositório ou usuário não encontrado.</strong>`;
+                userCommits.appendChild(li);
+            } else {
+                data.forEach(commit => {
+                    const li = document.createElement('li');
+                    li.classList.add('list-group-item');
 
-                if (data.message === "Not Found") {
-                    let ul = document.getElementById('userRepos');
+                    const message = commit.commit.message;
+                    const date = new Date(commit.commit.author.date).toLocaleString();
 
-                    // Create variable that will create li's to be added to ul
-                    let li = document.createElement('li');
-
-                    // Add Bootstrap list item class to each li
-                    li.classList.add('list-group-item')
-                    // Create the html markup for each li
-                    li.innerHTML = (`
-                <p><strong>No account exists with username:</strong> ${gitHubUsername}</p>`);
-                    // Append each li to the ul
-                    ul.appendChild(li);
-                } else {
-
-                    let ul = document.getElementById('userRepos');
-
-                    // Create variable that will create li's to be added to ul
-                    let li = document.createElement('li');
-
-                    // Add Bootstrap list item class to each li
-                    li.classList.add('list-group-item')
-
-                    // Create the html markup for each li
-                    li.innerHTML = (`
-                <p><strong>Repo:</strong> ${data[i].name}</p>
-                <p><strong>Description:</strong> ${data[i].description}</p>
-                <p><strong>URL:</strong> <a href="${data[i].html_url}">${data[i].html_url}</a></p>
-            `);
-
-                    // Append each li to the ul
-                    ul.appendChild(li);
-                }
+                    li.innerHTML = `
+                        <p><strong>Mensagem:</strong> ${message}</p>
+                        <p><strong>Data:</strong> ${date}</p>
+                    `;
+                    userCommits.appendChild(li);
+                });
             }
-        })
-})
+        });
+});
 
-function requestUserRepos(username) {
-    // create a variable to hold the `Promise` returned from `fetch`
-    return Promise.resolve(fetch(`https://api.github.com/users/${username}/repos`));
+function requestUserCommits(username, repo) {
+    return fetch(`https://api.github.com/repos/${username}/${repo}/commits`);
 }
